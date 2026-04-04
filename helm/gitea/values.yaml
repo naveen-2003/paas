@@ -1,0 +1,51 @@
+# gitea-values.yaml
+# helm install gitea gitea-charts/gitea -n paas-system -f gitea-values.yaml
+
+gitea:
+  admin:
+    username: admin
+    password: admin1234
+    email: admin@paas.local
+
+  config:
+    database:
+      DB_TYPE: sqlite3
+    server:
+      DOMAIN: gitea.paas.local
+      ROOT_URL: http://gitea.paas.local
+      HTTP_PORT: 3000
+    webhook:
+      ALLOWED_HOST_LIST: "*"
+      SKIP_TLS_VERIFY: true
+    repository:
+      DEFAULT_BRANCH: main
+
+# Disable heavy dependencies — use sqlite for local dev
+postgresql-ha:
+  enabled: false
+
+redis-cluster:
+  enabled: false
+
+persistence:
+  enabled: true
+  size: 1Gi
+
+service:
+  http:
+    type: ClusterIP
+    port: 3000
+  ssh:
+    type: ClusterIP
+    port: 22
+
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  hosts:
+    - host: gitea.paas.local
+      paths:
+        - path: /
+          pathType: Prefix
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
