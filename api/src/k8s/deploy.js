@@ -1,17 +1,19 @@
 const { appsApi, coreApi, netApi } = require('./client');
 
 const NAMESPACE = 'paas-apps';
-const REGISTRY  = 'localhost:5001';
+const REGISTRY  = 'kind-registry:5000';
 
 async function ensureNamespace(ns) {
   try {
-    await coreApi.createNamespace({body:{ metadata: { name: ns } }});
-  } catch (e) { if (e.statusCode !== 409) throw e; }
+    await coreApi.createNamespace({ body: { metadata: { name: ns } } });
+  } catch (e) { if (e.code !== 409) throw e; }
 }
 
 async function applyDeployment(appName, imageTag) {
   const image = `${REGISTRY}/${appName}:${imageTag}`;
-  const body = {
+  const manifest = {
+    apiVersion: 'apps/v1',
+    kind: 'Deployment',
     metadata: { name: appName, namespace: NAMESPACE },
     spec: {
       replicas: 1,
@@ -30,16 +32,27 @@ async function applyDeployment(appName, imageTag) {
     }
   };
   try {
-    await appsApi.createNamespacedDeployment(NAMESPACE, body);
+    await appsApi.createNamespacedDeployment({
+      namespace: NAMESPACE,
+      body: manifest,
+    });
+    console.log(`✅ Deployment created: ${appName}`);
   } catch (e) {
-    if (e.statusCode === 409)
-      await appsApi.replaceNamespacedDeployment(appName, NAMESPACE, body);
-    else throw e;
+    if (e.code === 409) {
+      await appsApi.replaceNamespacedDeployment({
+        name: appName,
+        namespace: NAMESPACE,
+        body: manifest,
+      });
+      console.log(`✅ Deployment updated: ${appName}`);
+    } else throw e;
   }
 }
 
 async function applyService(appName) {
-  const body = {
+  const manifest = {
+    apiVersion: 'v1',
+    kind: 'Service',
     metadata: { name: appName, namespace: NAMESPACE },
     spec: {
       selector: { app: appName },
@@ -47,13 +60,19 @@ async function applyService(appName) {
     }
   };
   try {
-    await coreApi.createNamespacedService(NAMESPACE, body);
-  } catch (e) { if (e.statusCode !== 409) throw e; }
+    await coreApi.createNamespacedService({
+      namespace: NAMESPACE,
+      body: manifest,
+    });
+    console.log(`✅ Service created: ${appName}`);
+  } catch (e) { if (e.code !== 409) throw e; }
 }
 
 async function applyIngress(appName) {
   const host = `${appName}.paas.local`;
-  const body = {
+  const manifest = {
+    apiVersion: 'networking.k8s.io/v1',
+    kind: 'Ingress',
     metadata: {
       name: appName,
       namespace: NAMESPACE,
@@ -74,11 +93,20 @@ async function applyIngress(appName) {
     }
   };
   try {
-    await netApi.createNamespacedIngress(NAMESPACE, body);
+    await netApi.createNamespacedIngress({
+      namespace: NAMESPACE,
+      body: manifest,
+    });
+    console.log(`✅ Ingress created: ${host}`);
   } catch (e) {
-    if (e.statusCode === 409)
-      await netApi.replaceNamespacedIngress(appName, NAMESPACE, body);
-    else throw e;
+    if (e.code === 409) {
+      await netApi.replaceNamespacedIngress({
+        name: appName,
+        namespace: NAMESPACE,
+        body: manifest,
+      });
+      console.log(`✅ Ingress updated: ${host}`);
+    } else throw e;
   }
 }
 
@@ -87,7 +115,7 @@ async function deployApp(appName, imageTag) {
   await applyDeployment(appName, imageTag);
   await applyService(appName);
   await applyIngress(appName);
-  console.log(`✅ Deployed ${appName} → http://${appName}.paas.local`);
+  console.log(`🚀 ${appName} → http://${appName}.paas.local`);
 }
 
 module.exports = { deployApp };

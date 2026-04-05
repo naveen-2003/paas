@@ -14,6 +14,9 @@ router.post('/gitea', async (req, res) => {
   const appName   = payload.repository.name;
   const commitSha = payload.after;
   const repoUrl   = payload.repository.clone_url;
+  // console.log(payload.repository);
+  // const repoUrl = `https://admin:admin1234@gitea-http.paas-system.svc.cluster.local:3000/admin/${appName}.git`;
+  console.log(`Gitea Payload: ${repoUrl}`);
 
   if (!commitSha || commitSha === '0000000000000000000000000000000000000000')
     return res.status(200).json({ message: 'Skipped (branch delete)' });

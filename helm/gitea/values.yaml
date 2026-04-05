@@ -47,5 +47,9 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
+  tls:
+    - secretName: gitea-tls-secret
+      hosts:
+        - gitea.paas.local
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
