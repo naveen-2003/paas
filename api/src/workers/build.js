@@ -3,6 +3,8 @@ const { Worker } = require('bullmq');
 const { batchApi, coreApi } = require('../k8s/client');
 const { pool } = require('../db');
 const { deployApp } = require('../k8s/deploy');
+const { getRegistryConfig } = require('../providers/registry');
+const { getK8sClients } = require('../providers/cluster');
 
 const connection = {
   host: process.env.REDIS_HOST || 'localhost',
@@ -27,11 +29,16 @@ async function waitForJob(jobName, namespace, deploymentId) {
       });
       // New client returns object directly, no .body wrapper
       if (job.status?.succeeded) return true;
-      if (job.status?.failed)    return false;
+      if (job.status?.failed) return false;
     } catch (e) {
       console.log('Job not ready yet:', e.message);
     }
-    await addLog(deploymentId, `  Building... (${(i + 1) * 5}s elapsed)`);
+    if ((i + 1) % 12 == 0) {
+      await addLog(deploymentId, `  Building... (${(i + 1) * 5}s elapsed)`);
+    }
+    else {
+      console.log(`[build] ${line}`);
+    }
   }
   return false;
 }
@@ -61,63 +68,62 @@ async function fetchKanikoLogs(jobName, buildNs, deploymentId) {
 }
 
 new Worker('builds', async (job) => {
-  const { appName, commitSha, deploymentId, repoUrl } = job.data;
-  const buildNs  = 'paas-builds';
-  const shortSha = commitSha.slice(0, 7);
-  const jobName  = `build-${appName}-${shortSha}`;
-  // const imageDest = `host.docker.internal:5001/${appName}:${shortSha}`;
-  const imageDest = `kind-registry:5000/${appName}:${shortSha}`;
-  // console.log(job.data);
   try {
     await addLog(deploymentId, `🔨 Build started: ${appName} @ ${shortSha}`);
     await addLog(deploymentId, `   Repo: ${repoUrl}`);
 
-    // Ensure build namespace
-    try {
-      await coreApi.createNamespace({ body: { metadata: { name: buildNs } } });
-    } catch (e) { if (e.code !== 409) throw e; }
+    const {
+      appName, commitSha, deploymentId,
+      cloneUrl, gitProvider,
+      registryType, registryHost, registryUsername, registryPassword,
+      awsRegion, awsAccessKey, awsSecretKey,
+      kubeconfig, clusterType, namespacePrefix,
+    } = job.data;
 
-    // Create Kaniko Job
-    // const kanikoJob = {
-    //   apiVersion: 'batch/v1',
-    //   kind: 'Job',
-    //   metadata: { name: jobName, namespace: buildNs },
-    //   spec: {
-    //     ttlSecondsAfterFinished: 120,
-    //     template: {
-    //       spec: {
-    //         restartPolicy: 'Never',
-    //         containers: [{
-    //           name: 'kaniko',
-    //           image: 'gcr.io/kaniko-project/executor:latest',
-    //           imagePullPolicy: 'IfNotPresent',
-    //           args: [
-    //             `--context=${repoUrl}`,
-    //             `--destination=${imageDest}`,
-    //             // '--insecure',
-    //             // '--insecure-pull',
-    //             // '--skip-tls-verify',
-    //             // '--skip-tls-verify-pull',
-    //           ]
-    //         }]
-    //       }
-    //     }
-    //   }
-    // };
+    const shortSha = commitSha.slice(0, 7);
+    const jobName = `build-${appName}-${shortSha}`;
 
-    // Smart clone URL — use internal service for local Gitea, original URL for GitHub/others
-    const isLocalGitea = repoUrl.includes('gitea.paas.local') || repoUrl.includes('gitea-http');
-    const cloneUrl = isLocalGitea
-      ? `http://gitea-http.paas-system.svc.cluster.local:3000/admin/${appName}.git`
-      : repoUrl;  // GitHub, GitLab, etc — use as-is
+    // Get registry config
+    const regConfig = await getRegistryConfig({
+      type: registryType,
+      host: registryHost,
+      username: registryUsername,
+      password_or_token: registryPassword,
+      aws_region: awsRegion,
+      aws_access_key: awsAccessKey,
+      aws_secret_key: awsSecretKey,
+    });
 
-    const gitCloneCmd = isLocalGitea
-      ? `git config --global http.sslVerify false && git clone ${cloneUrl} /workspace`
-      : `git clone ${cloneUrl} /workspace`;  // GitHub uses valid HTTPS, no skip needed
+    const imageDest = `${regConfig.destination}/${appName}:${shortSha}`;
+
+    // Get K8s clients for this app's cluster
+    const clients = kubeconfig
+      ? getK8sClients({ kubeconfig: `encrypted:${kubeconfig}` }) // already decrypted
+      : { appsApi, coreApi, netApi, batchApi }; // fallback to default
+
+    const isLocal = gitProvider === 'gitea' && cloneUrl.includes('svc.cluster.local');
+
+    const kanikoArgs = [
+      '--context=dir:///workspace',
+      '--dockerfile=Dockerfile',
+      `--destination=${imageDest}`,
+      '--image-download-retry=3',
+    ];
+
+    // Registry auth secret name (created before job)
+    if (regConfig.authSecret) {
+      kanikoArgs.push(`--registry-credentials=${regConfig.host}=${regConfig.authSecret.username}:${regConfig.authSecret.password}`);
+    }
+
+    // Registry auth secret name (created before job)
+    if (regConfig.authSecret) {
+      kanikoArgs.push(`--registry-credentials=${regConfig.host}=${regConfig.authSecret.username}:${regConfig.authSecret.password}`);
+    }
+
     const kanikoJob = {
       apiVersion: 'batch/v1',
       kind: 'Job',
-      metadata: { name: jobName, namespace: buildNs },
+      metadata: { name: jobName, namespace: 'paas-builds' },
       spec: {
         ttlSecondsAfterFinished: 120,
         template: {
@@ -126,24 +132,16 @@ new Worker('builds', async (job) => {
             initContainers: [{
               name: 'git-clone',
               image: 'alpine/git:latest',
-              imagePullPolicy: 'IfNotPresent',
               command: ['sh', '-c'],
-              args: [`${gitCloneCmd} && echo "Clone done" && ls /workspace`],
+              args: [
+                `${isLocal ? 'git config --global http.sslVerify false && ' : ''}git clone ${cloneUrl} /workspace && echo "✅ Clone done"`
+              ],
               volumeMounts: [{ name: 'workspace', mountPath: '/workspace' }]
             }],
             containers: [{
               name: 'kaniko',
               image: 'gcr.io/kaniko-project/executor:latest',
-              imagePullPolicy: 'IfNotPresent',
-              args: [
-                '--context=dir:///workspace',      // ← always dir, never URL
-                '--dockerfile=Dockerfile',
-                `--destination=${imageDest}`,
-                '--insecure',                      // push over HTTP
-                '--insecure-pull',                 // pull base images over HTTP if needed
-                '--skip-tls-verify',               // skip TLS for registry
-                '--skip-tls-verify-pull',          // skip TLS for pulling base images
-              ],
+              args: kanikoArgs,
               volumeMounts: [{ name: 'workspace', mountPath: '/workspace' }]
             }],
             volumes: [{ name: 'workspace', emptyDir: {} }]
@@ -151,6 +149,12 @@ new Worker('builds', async (job) => {
         }
       }
     };
+
+
+    // Ensure build namespace
+    try {
+      await coreApi.createNamespace({ body: { metadata: { name: buildNs } } });
+    } catch (e) { if (e.code !== 409) throw e; }
 
     try {
       await batchApi.createNamespacedJob({
