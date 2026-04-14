@@ -12,13 +12,13 @@ function encrypt(text) {
 }
 
 function decrypt(text) {
-  console.log(text);
+  // console.log(text);
   if (!text || typeof text !== 'string') {
     throw new Error('Invalid encrypted text');
   }
 
   const parts = text.split(':');
-  console.log(parts);
+  // console.log(parts);
   if (parts.length !== 3) {
     throw new Error('Malformed encrypted payload');
   }

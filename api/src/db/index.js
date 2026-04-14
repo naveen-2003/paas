@@ -11,9 +11,29 @@ const pool = new Pool({
 async function init() {
   await pool.query(`
 
+    -- ── Users ─────────────────────────────────────────────────────────────
+    CREATE TABLE IF NOT EXISTS users (
+      id            SERIAL PRIMARY KEY,
+      email         VARCHAR(255) UNIQUE NOT NULL,
+      password_hash TEXT        NOT NULL,
+      role          VARCHAR(32) DEFAULT 'user',  -- user, admin
+      created_at    TIMESTAMP DEFAULT NOW()
+    );
+
+    -- ── API Keys (for CLI/webhooks) ────────────────────────────────────────
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id         SERIAL PRIMARY KEY,
+      user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      name       VARCHAR(64) NOT NULL,
+      key_hash   TEXT        NOT NULL,
+      last_used  TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+
     -- ── Git Providers ─────────────────────────────────────────────────────
     CREATE TABLE IF NOT EXISTS git_providers (
       id           SERIAL PRIMARY KEY,
+      user_id      INTEGER REFERENCES users(id) ON DELETE CASCADE,
       provider     VARCHAR(32) NOT NULL,
       name         VARCHAR(64) NOT NULL,
       base_url     TEXT,
@@ -25,6 +45,7 @@ async function init() {
     -- ── Container Registries ──────────────────────────────────────────────
     CREATE TABLE IF NOT EXISTS registries (
       id                SERIAL PRIMARY KEY,
+      user_id           INTEGER REFERENCES users(id) ON DELETE CASCADE,
       name              VARCHAR(64) NOT NULL,
       type              VARCHAR(32) NOT NULL,
       host              TEXT        NOT NULL,
@@ -40,16 +61,18 @@ async function init() {
     -- ── Clusters ──────────────────────────────────────────────────────────
     CREATE TABLE IF NOT EXISTS clusters (
       id               SERIAL PRIMARY KEY,
+      user_id          INTEGER REFERENCES users(id) ON DELETE CASCADE,
       name             VARCHAR(64) NOT NULL,
       type             VARCHAR(32) NOT NULL,
       kubeconfig       TEXT        NOT NULL,
-      namespace_prefix VARCHAR(32) DEFAULT 'paas-apps',
+      namespace_prefix VARCHAR(32) DEFAULT 'apps',
       created_at       TIMESTAMP DEFAULT NOW()
     );
 
     -- ── Apps ──────────────────────────────────────────────────────────────
     CREATE TABLE IF NOT EXISTS apps (
       id              SERIAL PRIMARY KEY,
+      user_id         INTEGER REFERENCES users(id) ON DELETE CASCADE,
       name            VARCHAR(64) UNIQUE NOT NULL,
       subdomain       VARCHAR(64) UNIQUE NOT NULL,
       repo_url        TEXT,

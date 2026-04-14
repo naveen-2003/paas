@@ -39,7 +39,7 @@ async function waitForJob(jobName, appNamespace, deploymentId, clusterApi) {
       await addLog(deploymentId, `  Building... (${(i + 1) * 5}s elapsed)`);
     }
     else {
-      console.log(`[build] ${line}`);
+      console.log(`[build]  Building... (${(i + 1) * 5}s elapsed)`);
     }
   }
   return false;
@@ -52,6 +52,7 @@ async function fetchKanikoLogs(jobName, appNamespace, deploymentId, clusterApi) 
       namespace: appNamespace,
       labelSelector: `job-name=${jobName}`,
     });
+    console.log(podList);
     const podName = podList.items[0]?.metadata?.name;
     if (!podName) return;
 
@@ -104,6 +105,7 @@ new Worker('builds', async (job) => {
     //   ? getK8sClients({ kubeconfig: `encrypted:${kubeconfig}` }) // already decrypted
     //   : { appsApi, coreApi, netApi, batchApi }; // fallback to default
     const clusterApi = getK8sClients({ kubeconfig: `${kubeconfig}` });
+    console.log(`Test: ${clusterApi}`);
 
     const isLocal = gitProvider === 'gitea' && cloneUrl.includes('svc.cluster.local');
 
@@ -172,7 +174,7 @@ new Worker('builds', async (job) => {
 
     if (!success) {
       // ─── FAILURE: fetch kaniko logs to show what went wrong ───────────
-      await fetchKanikoLogs(jobName, BUILD_NAMESPACE, deploymentId);
+      await fetchKanikoLogs(jobName, BUILD_NAMESPACE, deploymentId, clusterApi);
 
       await pool.query(
         "UPDATE deployments SET status='failed', finished_at=NOW() WHERE id=$1",
