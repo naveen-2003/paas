@@ -12,13 +12,38 @@ function encrypt(text) {
 }
 
 function decrypt(text) {
-  const [ivHex, tagHex, encHex] = text.split(':');
+  console.log(text);
+  if (!text || typeof text !== 'string') {
+    throw new Error('Invalid encrypted text');
+  }
+
+  const parts = text.split(':');
+  console.log(parts);
+  if (parts.length !== 3) {
+    throw new Error('Malformed encrypted payload');
+  }
+
+  const [ivHex, tagHex, encHex] = parts;
+
+  if (!ivHex || !tagHex || !encHex) {
+    throw new Error('Missing encryption components');
+  }
+
   const iv = Buffer.from(ivHex, 'hex');
   const tag = Buffer.from(tagHex, 'hex');
   const encrypted = Buffer.from(encHex, 'hex');
+
+  if (iv.length !== 12 && iv.length !== 16) {
+    throw new Error(`Invalid IV length: ${iv.length}`);
+  }
+
   const decipher = crypto.createDecipheriv(ALGO, KEY, iv);
   decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8');
+
+  return Buffer.concat([
+    decipher.update(encrypted),
+    decipher.final()
+  ]).toString('utf8');
 }
 
 module.exports = { encrypt, decrypt };

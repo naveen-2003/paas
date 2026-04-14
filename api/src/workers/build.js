@@ -1,10 +1,12 @@
 require('dotenv').config();
 const { Worker } = require('bullmq');
-const { batchApi, coreApi } = require('../k8s/client');
+// const { batchApi, coreApi } = require('../k8s/client');
 const { pool } = require('../db');
 const { deployApp } = require('../k8s/deploy');
 const { getRegistryConfig } = require('../providers/registry');
 const { getK8sClients } = require('../providers/cluster');
+
+const BUILD_NAMESPACE = 'paas-builds'
 
 const connection = {
   host: process.env.REDIS_HOST || 'localhost',
@@ -19,13 +21,13 @@ async function addLog(deploymentId, line) {
   );
 }
 
-async function waitForJob(jobName, namespace, deploymentId) {
+async function waitForJob(jobName, appNamespace, deploymentId, clusterApi) {
   for (let i = 0; i < 60; i++) {
     await new Promise(r => setTimeout(r, 5000));
     try {
-      const job = await batchApi.readNamespacedJob({
+      const job = await clusterApi.batchApi.readNamespacedJob({
         name: jobName,
-        namespace,
+        namespace: appNamespace,
       });
       // New client returns object directly, no .body wrapper
       if (job.status?.succeeded) return true;
@@ -44,18 +46,18 @@ async function waitForJob(jobName, namespace, deploymentId) {
 }
 
 // ─── Fetch kaniko pod logs when build fails ───────────────────────────────
-async function fetchKanikoLogs(jobName, buildNs, deploymentId) {
+async function fetchKanikoLogs(jobName, appNamespace, deploymentId, clusterApi) {
   try {
-    const { body: podList } = await coreApi.listNamespacedPod({
-      namespace: buildNs,
+    const { body: podList } = await clusterApi.coreApi.listNamespacedPod({
+      namespace: appNamespace,
       labelSelector: `job-name=${jobName}`,
     });
     const podName = podList.items[0]?.metadata?.name;
     if (!podName) return;
 
-    const { body: logs } = await coreApi.readNamespacedPodLog({
+    const { body: logs } = await clusterApi.coreApi.readNamespacedPodLog({
       name: podName,
-      namespace: buildNs,
+      namespace: appNamespace,
     });
 
     await addLog(deploymentId, '--- Kaniko logs (last 20 lines) ---');
@@ -69,19 +71,20 @@ async function fetchKanikoLogs(jobName, buildNs, deploymentId) {
 
 new Worker('builds', async (job) => {
   try {
-    await addLog(deploymentId, `🔨 Build started: ${appName} @ ${shortSha}`);
-    await addLog(deploymentId, `   Repo: ${repoUrl}`);
-
+    
     const {
       appName, commitSha, deploymentId,
       cloneUrl, gitProvider,
       registryType, registryHost, registryUsername, registryPassword,
       awsRegion, awsAccessKey, awsSecretKey,
-      kubeconfig, clusterType, namespacePrefix,
+      kubeconfig, clusterType, appNamespace,
     } = job.data;
-
+    
     const shortSha = commitSha.slice(0, 7);
     const jobName = `build-${appName}-${shortSha}`;
+    
+    await addLog(deploymentId, `🔨 Build started: ${appName} @ ${shortSha}`);
+    await addLog(deploymentId, `   Repo: ${cloneUrl}`);
 
     // Get registry config
     const regConfig = await getRegistryConfig({
@@ -97,9 +100,10 @@ new Worker('builds', async (job) => {
     const imageDest = `${regConfig.destination}/${appName}:${shortSha}`;
 
     // Get K8s clients for this app's cluster
-    const clients = kubeconfig
-      ? getK8sClients({ kubeconfig: `encrypted:${kubeconfig}` }) // already decrypted
-      : { appsApi, coreApi, netApi, batchApi }; // fallback to default
+    // const clients = kubeconfig
+    //   ? getK8sClients({ kubeconfig: `encrypted:${kubeconfig}` }) // already decrypted
+    //   : { appsApi, coreApi, netApi, batchApi }; // fallback to default
+    const clusterApi = getK8sClients({ kubeconfig: `${kubeconfig}` });
 
     const isLocal = gitProvider === 'gitea' && cloneUrl.includes('svc.cluster.local');
 
@@ -115,15 +119,10 @@ new Worker('builds', async (job) => {
       kanikoArgs.push(`--registry-credentials=${regConfig.host}=${regConfig.authSecret.username}:${regConfig.authSecret.password}`);
     }
 
-    // Registry auth secret name (created before job)
-    if (regConfig.authSecret) {
-      kanikoArgs.push(`--registry-credentials=${regConfig.host}=${regConfig.authSecret.username}:${regConfig.authSecret.password}`);
-    }
-
     const kanikoJob = {
       apiVersion: 'batch/v1',
       kind: 'Job',
-      metadata: { name: jobName, namespace: 'paas-builds' },
+      metadata: { name: jobName, namespace: BUILD_NAMESPACE },
       spec: {
         ttlSecondsAfterFinished: 120,
         template: {
@@ -153,12 +152,12 @@ new Worker('builds', async (job) => {
 
     // Ensure build namespace
     try {
-      await coreApi.createNamespace({ body: { metadata: { name: buildNs } } });
+      await clusterApi.coreApi.createNamespace({ body: { metadata: { name: BUILD_NAMESPACE } } });
     } catch (e) { if (e.code !== 409) throw e; }
 
     try {
-      await batchApi.createNamespacedJob({
-        namespace: buildNs,
+      await clusterApi.batchApi.createNamespacedJob({
+        namespace: BUILD_NAMESPACE,
         body: kanikoJob,
       });
       await addLog(deploymentId, `   Kaniko job created: ${jobName}`);
@@ -169,11 +168,11 @@ new Worker('builds', async (job) => {
     }
 
     // ─── Wait for job to complete ─────────────────────────────────────────
-    const success = await waitForJob(jobName, buildNs, deploymentId);
+    const success = await waitForJob(jobName, BUILD_NAMESPACE, deploymentId, clusterApi);
 
     if (!success) {
       // ─── FAILURE: fetch kaniko logs to show what went wrong ───────────
-      await fetchKanikoLogs(jobName, buildNs, deploymentId);
+      await fetchKanikoLogs(jobName, BUILD_NAMESPACE, deploymentId);
 
       await pool.query(
         "UPDATE deployments SET status='failed', finished_at=NOW() WHERE id=$1",
@@ -185,7 +184,9 @@ new Worker('builds', async (job) => {
 
     // ─── SUCCESS: deploy to Kubernetes ───────────────────────────────────
     await addLog(deploymentId, '✅ Build succeeded — deploying...');
-    await deployApp(appName, shortSha);
+
+    // Will not work, since the image's registry access need to specified
+    await deployApp(appName, appNamespace, imageDest);
 
     await pool.query(
       "UPDATE deployments SET status='live', finished_at=NOW() WHERE id=$1",

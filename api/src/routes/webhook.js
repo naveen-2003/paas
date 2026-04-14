@@ -107,7 +107,7 @@ router.post('/push', async (req, res) => {
     awsSecretKey: app.aws_secret_key ? decrypt(app.aws_secret_key) : null,
     kubeconfig:   app.kubeconfig ? decrypt(app.kubeconfig) : null,
     clusterType:  app.cluster_type || 'kind',
-    namespacePrefix: app.namespace_prefix || 'paas',
+    appNamespace: app.namespace_prefix || 'paas',
   });
 
   res.json({ message: 'Build queued', deploymentId: dep[0].id });

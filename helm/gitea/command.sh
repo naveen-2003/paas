@@ -16,3 +16,18 @@ helm install gitea gitea-charts/gitea \
   --version 12.5.0 \
   -f helm/gitea/values.yaml \
   --disable-openapi-validation
+
+helm upgrade --install gitea gitea-charts/gitea \
+  --version 12.5.0 \
+  -f helm/gitea/values.yaml
+
+
+# TLS Secret creation
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+-keyout server.key -out server.crt \
+-subj "/CN=api.test1.local/O=gitea.paas.local" \
+-addext "subjectAltName = DNS:gitea.paas.local"
+
+kubectl create secret tls gitea-tls-secret --cert=server.crt --key=server.key
+
+

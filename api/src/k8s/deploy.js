@@ -1,7 +1,7 @@
 const { appsApi, coreApi, netApi } = require('./client');
 
-const NAMESPACE = 'paas-apps';
-const REGISTRY  = 'kind-registry:5000';
+// const NAMESPACE = 'paas-apps';
+// const REGISTRY  = 'kind-registry:5000';
 
 async function ensureNamespace(ns) {
   try {
@@ -9,12 +9,13 @@ async function ensureNamespace(ns) {
   } catch (e) { if (e.code !== 409) throw e; }
 }
 
-async function applyDeployment(appName, imageTag) {
-  const image = `${REGISTRY}/${appName}:${imageTag}`;
+async function applyDeployment(appName, appNamespace, imageDest) {
+  // const image = `${REGISTRY}/${appName}:${imageTag}`;
+  const image = imageDest;
   const manifest = {
     apiVersion: 'apps/v1',
     kind: 'Deployment',
-    metadata: { name: appName, namespace: NAMESPACE },
+    metadata: { name: appName, namespace: appNamespace },
     spec: {
       replicas: 1,
       selector: { matchLabels: { app: appName } },
@@ -110,11 +111,11 @@ async function applyIngress(appName) {
   }
 }
 
-async function deployApp(appName, imageTag) {
-  await ensureNamespace(NAMESPACE);
-  await applyDeployment(appName, imageTag);
-  await applyService(appName);
-  await applyIngress(appName);
+async function deployApp(appName, appNamespace, imageDest) {
+  await ensureNamespace(appNamespace);
+  await applyDeployment(appName, appNamespace, imageDest);
+  await applyService(appName, appNamespace);
+  await applyIngress(appName, appNamespace);
   console.log(`🚀 ${appName} → http://${appName}.paas.local`);
 }
 

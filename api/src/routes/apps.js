@@ -13,13 +13,13 @@ const buildQueue = new Queue('builds', {
 
 // POST /apps — register a new app
 router.post('/', async (req, res) => {
-  const { name } = req.body;
+  const { name, repo_url, git_provider_id, registry_id, cluster_id } = req.body;
   if (!name || !/^[a-z0-9-]+$/.test(name))
     return res.status(400).json({ error: 'Name must be lowercase letters, numbers, hyphens only' });
   try {
     const { rows } = await pool.query(
-      'INSERT INTO apps (name, subdomain) VALUES ($1, $1) RETURNING *',
-      [name]
+      'INSERT INTO apps (name, subdomain, repo_url, git_provider_id, registry_id, cluster_id) VALUES ($1, $1, $2, $3, $4, $5) RETURNING *',
+      [name, repo_url, git_provider_id, registry_id, cluster_id]
     );
     res.json(rows[0]);
   } catch (e) {

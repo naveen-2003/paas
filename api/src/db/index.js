@@ -43,7 +43,7 @@ async function init() {
       name             VARCHAR(64) NOT NULL,
       type             VARCHAR(32) NOT NULL,
       kubeconfig       TEXT        NOT NULL,
-      namespace_prefix VARCHAR(32) DEFAULT 'paas',
+      namespace_prefix VARCHAR(32) DEFAULT 'paas-apps',
       created_at       TIMESTAMP DEFAULT NOW()
     );
 
