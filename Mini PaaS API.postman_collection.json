@@ -1,0 +1,1254 @@
+{
+  "info": {
+    "_postman_id": "96afbee3-7ba5-48f8-89b8-9146dd1ed0b5",
+    "name": "Mini PaaS API",
+    "description": "Complete API collection for Mini PaaS — Self-Hosted Kubernetes Platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "33121531",
+    "_collection_link": "https://go.postman.co/collection/33121531-96afbee3-7ba5-48f8-89b8-9146dd1ed0b5?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Check if API is running"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.token) {",
+                  "  pm.collectionVariables.set('token', res.token);",
+                  "  console.log('Token saved');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@paas.local\",\n  \"password\": \"admin1234\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Register a new user. First user becomes admin automatically."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.token) {",
+                  "  pm.collectionVariables.set('token', res.token);",
+                  "  console.log('Token saved');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@paas.local\",\n  \"password\": \"admin1234\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login and get JWT token. Token is auto-saved to collection variable."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Get the currently authenticated user."
+          },
+          "response": []
+        },
+        {
+          "name": "Generate API Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.key) {",
+                  "  pm.collectionVariables.set('apiKey', res.key);",
+                  "  console.log('API Key saved:', res.key);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"my-cli-key\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/api-keys",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "api-keys"
+              ]
+            },
+            "description": "Generate a new API key. Shown ONCE — save it immediately."
+          },
+          "response": []
+        },
+        {
+          "name": "List API Keys",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/api-keys",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "api-keys"
+              ]
+            },
+            "description": "List all API keys for the current user."
+          },
+          "response": []
+        },
+        {
+          "name": "Revoke API Key",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/api-keys/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "api-keys",
+                "1"
+              ]
+            },
+            "description": "Revoke an API key by ID. Replace 1 with actual key ID."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Apps",
+      "item": [
+        {
+          "name": "Create App",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"myapp\",\n  \"repo_url\": \"https://github.com/youruser/yourrepo\",\n  \"branch\": \"main\",\n  \"git_provider_id\": 1,\n  \"registry_id\": 1,\n  \"cluster_id\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/apps",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apps"
+              ]
+            },
+            "description": "Register a new app. Name must be lowercase letters, numbers, hyphens only."
+          },
+          "response": []
+        },
+        {
+          "name": "Create App (Gitea Local)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"myapp\",\n  \"repo_url\": \"http://gitea.paas.local/admin/myapp.git\",\n  \"branch\": \"main\",\n  \"git_provider_id\": 1,\n  \"registry_id\": 1,\n  \"cluster_id\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/apps",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apps"
+              ]
+            },
+            "description": "Register a new app using local Gitea repo."
+          },
+          "response": []
+        },
+        {
+          "name": "List Apps",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/apps",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apps"
+              ]
+            },
+            "description": "List all apps for the authenticated user with latest deployment status."
+          },
+          "response": []
+        },
+        {
+          "name": "Get App",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/apps/myapp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apps",
+                "myapp"
+              ]
+            },
+            "description": "Get details of a specific app. Replace myapp with your app name."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete App",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/apps/myapp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apps",
+                "myapp"
+              ]
+            },
+            "description": "Delete an app. Replace myapp with your app name."
+          },
+          "response": []
+        },
+        {
+          "name": "Get App Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/apps/myapp/logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apps",
+                "myapp",
+                "logs"
+              ]
+            },
+            "description": "Get all build logs for the latest deployment."
+          },
+          "response": []
+        },
+        {
+          "name": "Get App Deployments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/apps/myapp/deployments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apps",
+                "myapp",
+                "deployments"
+              ]
+            },
+            "description": "Get full deployment history for an app."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Providers — Git",
+      "item": [
+        {
+          "name": "Add GitHub",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"github\",\n  \"name\": \"My GitHub\",\n  \"username\": \"your-github-username\",\n  \"access_token\": \"ghp_xxxxxxxxxxxxxxxxxxxx\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/providers/git",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "git"
+              ]
+            },
+            "description": "Add GitHub. Generate token at https://github.com/settings/tokens with repo scope."
+          },
+          "response": []
+        },
+        {
+          "name": "Add GitLab",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"gitlab\",\n  \"name\": \"My GitLab\",\n  \"username\": \"your-gitlab-username\",\n  \"access_token\": \"glpat-xxxxxxxxxxxxxxxxxxxx\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/providers/git",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "git"
+              ]
+            },
+            "description": "Add GitLab. Generate token at https://gitlab.com/-/profile/personal_access_tokens"
+          },
+          "response": []
+        },
+        {
+          "name": "Add Bitbucket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"bitbucket\",\n  \"name\": \"My Bitbucket\",\n  \"username\": \"your-bitbucket-username\",\n  \"access_token\": \"your-app-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/providers/git",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "git"
+              ]
+            },
+            "description": "Add Bitbucket. Generate app password at https://bitbucket.org/account/settings/app-passwords"
+          },
+          "response": []
+        },
+        {
+          "name": "Add Gitea (Self-hosted)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"gitea\",\n  \"name\": \"Local Gitea\",\n  \"base_url\": \"http://gitea.paas.local\",\n  \"username\": \"admin\",\n  \"access_token\": \"admin1234\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/providers/git",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "git"
+              ]
+            },
+            "description": "Add self-hosted Gitea."
+          },
+          "response": []
+        },
+        {
+          "name": "List Git Providers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/providers/git",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "git"
+              ]
+            },
+            "description": "List all git providers for the current user."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Git Provider",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/providers/git/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "git",
+                "1"
+              ]
+            },
+            "description": "Delete a git provider by ID. Replace 1 with actual ID."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Providers — Registry",
+      "item": [
+        {
+          "name": "Add Docker Hub",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Docker Hub\",\n  \"type\": \"dockerhub\",\n  \"username\": \"your-dockerhub-username\",\n  \"password_or_token\": \"your-dockerhub-access-token\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/providers/registry",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "registry"
+              ]
+            },
+            "description": "Add Docker Hub registry."
+          },
+          "response": []
+        },
+        {
+          "name": "Add GHCR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"GitHub Container Registry\",\n  \"type\": \"ghcr\",\n  \"username\": \"your-github-username\",\n  \"password_or_token\": \"ghp_xxxxxxxxxxxxxxxxxxxx\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/providers/registry",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "registry"
+              ]
+            },
+            "description": "Add GitHub Container Registry (ghcr.io)."
+          },
+          "response": []
+        },
+        {
+          "name": "Add AWS ECR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My AWS ECR\",\n  \"type\": \"ecr\",\n  \"host\": \"123456789.dkr.ecr.us-east-1.amazonaws.com\",\n  \"aws_region\": \"us-east-1\",\n  \"aws_access_key\": \"AKIAIOSFODNN7EXAMPLE\",\n  \"aws_secret_key\": \"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/providers/registry",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "registry"
+              ]
+            },
+            "description": "Add AWS ECR registry."
+          },
+          "response": []
+        },
+        {
+          "name": "Add GCR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Google Container Registry\",\n  \"type\": \"gcr\",\n  \"host\": \"gcr.io\",\n  \"username\": \"_json_key\",\n  \"gcp_project\": \"your-gcp-project-id\",\n  \"password_or_token\": \"{\\\"type\\\": \\\"service_account\\\", \\\"project_id\\\": \\\"...\\\"}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/providers/registry",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "registry"
+              ]
+            },
+            "description": "Add Google Container Registry."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Self-Hosted Registry",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Local KinD Registry\",\n  \"type\": \"self-hosted\",\n  \"host\": \"kind-registry:5000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/providers/registry",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "registry"
+              ]
+            },
+            "description": "Add a self-hosted registry. No auth needed for local KinD registry."
+          },
+          "response": []
+        },
+        {
+          "name": "List Registries",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/providers/registry",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "registry"
+              ]
+            },
+            "description": "List all registries for the current user."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Registry",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/providers/registry/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "registry",
+                "1"
+              ]
+            },
+            "description": "Delete a registry by ID. Replace 1 with actual ID."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Providers — Cluster",
+      "item": [
+        {
+          "name": "Add KinD Cluster",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Local KinD\",\n  \"type\": \"kind\",\n  \"namespace_prefix\": \"paas\",\n  \"kubeconfig\": \"paste-your-kubeconfig-yaml-here\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/providers/cluster",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "cluster"
+              ]
+            },
+            "description": "Add local KinD cluster. Get kubeconfig: kubectl config view --raw"
+          },
+          "response": []
+        },
+        {
+          "name": "Add K3s Cluster",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My VPS K3s\",\n  \"type\": \"k3s\",\n  \"namespace_prefix\": \"paas\",\n  \"kubeconfig\": \"paste-your-k3s-kubeconfig-here\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/providers/cluster",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "cluster"
+              ]
+            },
+            "description": "Add K3s cluster. Get kubeconfig from /etc/rancher/k3s/k3s.yaml on your VPS."
+          },
+          "response": []
+        },
+        {
+          "name": "Add AWS EKS Cluster",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My EKS Cluster\",\n  \"type\": \"eks\",\n  \"namespace_prefix\": \"paas\",\n  \"kubeconfig\": \"paste-your-eks-kubeconfig-here\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/providers/cluster",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "cluster"
+              ]
+            },
+            "description": "Add AWS EKS. Get kubeconfig: aws eks update-kubeconfig --name <cluster-name>"
+          },
+          "response": []
+        },
+        {
+          "name": "Add GKE Cluster",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My GKE Cluster\",\n  \"type\": \"gke\",\n  \"namespace_prefix\": \"paas\",\n  \"kubeconfig\": \"paste-your-gke-kubeconfig-here\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/providers/cluster",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "cluster"
+              ]
+            },
+            "description": "Add GKE. Get kubeconfig: gcloud container clusters get-credentials <cluster-name>"
+          },
+          "response": []
+        },
+        {
+          "name": "Add Self-Hosted Cluster",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Custom Cluster\",\n  \"type\": \"other\",\n  \"namespace_prefix\": \"paas\",\n  \"kubeconfig\": \"paste-your-kubeconfig-here\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/providers/cluster",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "cluster"
+              ]
+            },
+            "description": "Add any Kubernetes cluster using its kubeconfig."
+          },
+          "response": []
+        },
+        {
+          "name": "List Clusters",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/providers/cluster",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "cluster"
+              ]
+            },
+            "description": "List all clusters for the current user."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Cluster",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/providers/cluster/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "cluster",
+                "1"
+              ]
+            },
+            "description": "Delete a cluster by ID. Replace 1 with actual ID."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "item": [
+        {
+          "name": "Push Event (Gitea / GitHub)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Gitea-Signature",
+                "value": "sha256=your-hmac-signature"
+              },
+              {
+                "key": "X-GitHub-Event",
+                "value": "push"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"after\": \"abc1234567890abcdef1234567890abcdef123456\",\n  \"repository\": {\n    \"name\": \"myapp\",\n    \"clone_url\": \"http://gitea.paas.local/admin/myapp.git\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/webhooks/push",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "webhooks",
+                "push"
+              ]
+            },
+            "description": "Webhook endpoint for Gitea or GitHub push events. Triggers a build."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "API Key Auth Examples",
+      "item": [
+        {
+          "name": "List Apps (via API Key)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "ApiKey {{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/apps",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "apps"
+              ]
+            },
+            "description": "Use API key instead of JWT. Format: Authorization: ApiKey <key>"
+          },
+          "response": []
+        },
+        {
+          "name": "List Providers (via API Key)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "ApiKey {{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/providers/git",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "providers",
+                "git"
+              ]
+            },
+            "description": "Access providers using API key auth."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

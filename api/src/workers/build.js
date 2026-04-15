@@ -6,7 +6,7 @@ const { deployApp } = require('../k8s/deploy');
 const { getRegistryConfig } = require('../providers/registry');
 const { getK8sClients } = require('../providers/cluster');
 
-const BUILD_NAMESPACE = 'paas-builds'
+const BUILD_NAMESPACE = process.env.BUILD_NAMESPACE || 'paas-builds'
 
 const connection = {
   host: process.env.REDIS_HOST || 'localhost',
@@ -30,6 +30,8 @@ async function waitForJob(jobName, appNamespace, deploymentId, clusterApi) {
         namespace: appNamespace,
       });
       // New client returns object directly, no .body wrapper
+      console.log("Job Status: ");
+      console.log(job.status);
       if (job.status?.succeeded) return true;
       if (job.status?.failed) return false;
     } catch (e) {
@@ -48,6 +50,7 @@ async function waitForJob(jobName, appNamespace, deploymentId, clusterApi) {
 // ─── Fetch kaniko pod logs when build fails ───────────────────────────────
 async function fetchKanikoLogs(jobName, appNamespace, deploymentId, clusterApi) {
   try {
+    console.log(jobName+' '+appNamespace+" "+deploymentId+" "+clusterApi);
     const { body: podList } = await clusterApi.coreApi.listNamespacedPod({
       namespace: appNamespace,
       labelSelector: `job-name=${jobName}`,
@@ -114,6 +117,10 @@ new Worker('builds', async (job) => {
       '--dockerfile=Dockerfile',
       `--destination=${imageDest}`,
       '--image-download-retry=3',
+      '--skip-tls-verify',
+      '--skip-tls-verify-pull',
+      '--insecure',
+      '--insecure-pull'
     ];
 
     // Registry auth secret name (created before job)
@@ -142,6 +149,7 @@ new Worker('builds', async (job) => {
             containers: [{
               name: 'kaniko',
               image: 'gcr.io/kaniko-project/executor:latest',
+              imagePullPolicy: "IfNotPresent",
               args: kanikoArgs,
               volumeMounts: [{ name: 'workspace', mountPath: '/workspace' }]
             }],
@@ -155,7 +163,9 @@ new Worker('builds', async (job) => {
     // Ensure build namespace
     try {
       await clusterApi.coreApi.createNamespace({ body: { metadata: { name: BUILD_NAMESPACE } } });
-    } catch (e) { if (e.code !== 409) throw e; }
+    } catch (e) { 
+      // console.log(e);
+      if (e.code !== 409) throw e; }
 
     try {
       await clusterApi.batchApi.createNamespacedJob({
@@ -188,7 +198,7 @@ new Worker('builds', async (job) => {
     await addLog(deploymentId, '✅ Build succeeded — deploying...');
 
     // Will not work, since the image's registry access need to specified
-    await deployApp(appName, appNamespace, imageDest);
+    await deployApp(appName, appNamespace, imageDest, clusterApi);
 
     await pool.query(
       "UPDATE deployments SET status='live', finished_at=NOW() WHERE id=$1",

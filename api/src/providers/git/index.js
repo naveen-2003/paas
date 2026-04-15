@@ -19,7 +19,7 @@ function getCloneUrl(provider, repoUrl, username, token) {
     case 'gitea':
       // Check if local — swap to internal service URL
       if (url.hostname === 'gitea.paas.local') {
-        return `http://${username}:${token}@gitea-http.paas-system.svc.cluster.local:3000${url.pathname}`;
+        return `http://${username}:${token}@gitea-http.default.svc.cluster.local:3000${url.pathname}`;
       }
       // Self-hosted Gitea with real domain
       return `http://${username}:${token}@${url.host}${url.pathname}`;
