@@ -145,7 +145,7 @@ export function AppDetailsPage() {
             <div>
               <p className="text-sm text-gray-600">Created</p>
               <p className="mt-1 text-lg font-medium text-gray-900">
-                {new Date(app.createdAt).toLocaleDateString()}
+                {new Date(app.created_at).toLocaleDateString()}
               </p>
             </div>
 
@@ -188,7 +188,7 @@ export function AppDetailsPage() {
                       : 'text-green-400'
                 }`}
               >
-                <span className="text-gray-500">[{log.type}]</span> {log.message}
+                <span className="text-gray-500">[{log.logged_at}]</span> {log.line}
               </div>
             ))}
           </div>
@@ -221,7 +221,7 @@ export function AppDetailsPage() {
             <div>
               <p className="text-sm text-gray-600">Created</p>
               <p className="mt-1 text-lg font-medium text-gray-900">
-                {new Date(app.latestDeployment.createdAt).toLocaleString()}
+                {new Date(app.latestDeployment.created_at).toLocaleString()}
               </p>
             </div>
 

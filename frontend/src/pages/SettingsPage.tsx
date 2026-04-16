@@ -132,7 +132,7 @@ export function SettingsPage() {
                 <div className="flex-1">
                   <h3 className="font-medium text-gray-900">{key.name}</h3>
                   <p className="text-xs text-gray-600 mt-1">
-                    Created: {new Date(key.createdAt).toLocaleDateString()}
+                    Created: {new Date(key.created_at).toLocaleDateString()}
                   </p>
                 </div>
                 <button

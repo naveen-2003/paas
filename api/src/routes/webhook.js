@@ -53,9 +53,8 @@ router.post('/push', async (req, res) => {
   const payload = req.body;
   const appName   = payload.repository?.name;
   const commitSha = payload.after || payload.checkout_sha; // github vs gitlab
-
-  if (!appName || !commitSha) return res.status(400).end();
-  if (commitSha === '0000000000000000000000000000000000000000')
+  if (!appName) return res.status(400).end();
+  if (!commitSha || commitSha === '0000000000000000000000000000000000000000')
     return res.status(200).json({ message: 'Skipped' });
 
   // Load app with all provider details

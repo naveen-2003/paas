@@ -3,7 +3,7 @@ export interface User {
   id: number;
   email: string;
   isAdmin: boolean;
-  createdAt: string;
+  created_at: string;
 }
 
 export interface AuthResponse {
@@ -15,7 +15,7 @@ export interface ApiKey {
   id: number;
   name: string;
   key: string;
-  createdAt: string;
+  created_at: string;
 }
 
 // ============ Apps ============
@@ -37,7 +37,7 @@ export interface App {
   registry_id: number;
   cluster_id: number;
   status: 'idle' | 'building' | 'deploying' | 'running' | 'failed';
-  createdAt: string;
+  created_at: string;
   updatedAt: string;
   latestDeployment?: Deployment;
 }
@@ -47,16 +47,16 @@ export interface Deployment {
   appId: number;
   commitId: string;
   status: 'pending' | 'building' | 'deploying' | 'running' | 'failed';
-  createdAt: string;
+  created_at: string;
   completedAt?: string;
 }
 
 export interface DeploymentLog {
   id: number;
   deploymentId: number;
-  message: string;
+  line: string;
   type: 'info' | 'error' | 'warning';
-  createdAt: string;
+  logged_at: string;
 }
 
 // ============ Git Providers ============
@@ -75,7 +75,7 @@ export interface GitProvider {
   provider: GitProviderType;
   name: string;
   username: string;
-  createdAt: string;
+  created_at: string;
 }
 
 // ============ Registry Providers ============
@@ -98,7 +98,7 @@ export interface RegistryProvider {
   name: string;
   type: RegistryType;
   host?: string;
-  createdAt: string;
+  created_at: string;
 }
 
 // ============ Cluster Providers ============
@@ -116,7 +116,7 @@ export interface ClusterProvider {
   name: string;
   type: ClusterType;
   namespace_prefix: string;
-  createdAt: string;
+  created_at: string;
 }
 
 // ============ Errors & Responses ============

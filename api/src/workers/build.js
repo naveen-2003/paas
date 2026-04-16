@@ -30,19 +30,18 @@ async function waitForJob(jobName, appNamespace, deploymentId, clusterApi) {
         namespace: appNamespace,
       });
       // New client returns object directly, no .body wrapper
-      console.log("Job Status: ");
-      console.log(job.status);
       if (job.status?.succeeded) return true;
       if (job.status?.failed) return false;
     } catch (e) {
       console.log('Job not ready yet:', e.message);
     }
-    if ((i + 1) % 12 == 0) {
-      await addLog(deploymentId, `  Building... (${(i + 1) * 5}s elapsed)`);
-    }
-    else {
-      console.log(`[build]  Building... (${(i + 1) * 5}s elapsed)`);
-    }
+    await addLog(deploymentId, `  Building... (${(i + 1) * 5}s elapsed)`);
+    // if ((i + 1) % 12 == 0) {
+    //   await addLog(deploymentId, `  Building... (${(i + 1) * 5}s elapsed)`);
+    // }
+    // else {
+    //   console.log(`[build]  Building... (${(i + 1) * 5}s elapsed)`);
+    // }
   }
   return false;
 }
@@ -155,6 +154,14 @@ new Worker('builds', async (job) => {
       }
     };
 
+    // Ensure build namespace
+    try {
+      await clusterApi.coreApi.createNamespace({ body: { metadata: { name: BUILD_NAMESPACE } } });
+    } catch (e) {
+      // console.log(e);
+      if (e.code !== 409) throw e;
+    }
+
     // Registry auth secret name (created before job)
     if (regConfig.authSecret) {
       // kanikoArgs.push(`--registry-credentials=${regConfig.host}=${regConfig.authSecret.username}:${regConfig.authSecret.password}`);
@@ -169,18 +176,21 @@ new Worker('builds', async (job) => {
       };
 
       const secretName = `kaniko-creds-${jobName}`;
-
-      await clusterApi.coreApi.createNamespacedSecret({
-        namespace: BUILD_NAMESPACE,
-        body: {
-          apiVersion: 'v1',
-          kind: 'Secret',
-          metadata: { name: secretName, namespace: BUILD_NAMESPACE },
-          stringData: {
-            'config.json': JSON.stringify(dockerConfig),
-          },
-        }
-      });
+      try {
+        await clusterApi.coreApi.createNamespacedSecret({
+          namespace: BUILD_NAMESPACE,
+          body: {
+            apiVersion: 'v1',
+            kind: 'Secret',
+            metadata: { name: secretName, namespace: BUILD_NAMESPACE },
+            stringData: {
+              'config.json': JSON.stringify(dockerConfig),
+            },
+          }
+        });
+      } catch (e) {
+        if (e.code !== 409) throw e;
+      }
 
       // Add volume + mount to the job spec
       kanikoJob.spec.template.spec.volumes.push({
@@ -196,14 +206,6 @@ new Worker('builds', async (job) => {
         mountPath: '/kaniko/.docker',
       });
 
-    }
-
-    // Ensure build namespace
-    try {
-      await clusterApi.coreApi.createNamespace({ body: { metadata: { name: BUILD_NAMESPACE } } });
-    } catch (e) {
-      // console.log(e);
-      if (e.code !== 409) throw e;
     }
 
     try {
