@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const { init }            = require('./db');
 const authRouter          = require('./routes/auth');
 const { router: appsRouter } = require('./routes/apps');
@@ -8,6 +9,7 @@ const providersRouter     = require('./routes/providers');
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
 // ── Routes ────────────────────────────────────────────────────────────────
 app.use('/auth',      authRouter);       // public

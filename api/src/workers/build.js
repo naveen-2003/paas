@@ -50,7 +50,7 @@ async function waitForJob(jobName, appNamespace, deploymentId, clusterApi) {
 // ─── Fetch kaniko pod logs when build fails ───────────────────────────────
 async function fetchKanikoLogs(jobName, appNamespace, deploymentId, clusterApi) {
   try {
-    console.log(jobName+' '+appNamespace+" "+deploymentId+" "+clusterApi);
+    console.log(jobName + ' ' + appNamespace + " " + deploymentId + " " + clusterApi);
     const { body: podList } = await clusterApi.coreApi.listNamespacedPod({
       namespace: appNamespace,
       labelSelector: `job-name=${jobName}`,
@@ -75,7 +75,7 @@ async function fetchKanikoLogs(jobName, appNamespace, deploymentId, clusterApi) 
 
 new Worker('builds', async (job) => {
   try {
-    
+
     const {
       appName, commitSha, deploymentId,
       cloneUrl, gitProvider,
@@ -83,10 +83,10 @@ new Worker('builds', async (job) => {
       awsRegion, awsAccessKey, awsSecretKey,
       kubeconfig, clusterType, appNamespace,
     } = job.data;
-    
+
     const shortSha = commitSha.slice(0, 7);
     const jobName = `build-${appName}-${shortSha}`;
-    
+
     await addLog(deploymentId, `🔨 Build started: ${appName} @ ${shortSha}`);
     await addLog(deploymentId, `   Repo: ${cloneUrl}`);
 
@@ -123,10 +123,6 @@ new Worker('builds', async (job) => {
       '--insecure-pull'
     ];
 
-    // Registry auth secret name (created before job)
-    if (regConfig.authSecret) {
-      kanikoArgs.push(`--registry-credentials=${regConfig.host}=${regConfig.authSecret.username}:${regConfig.authSecret.password}`);
-    }
 
     const kanikoJob = {
       apiVersion: 'batch/v1',
@@ -159,13 +155,56 @@ new Worker('builds', async (job) => {
       }
     };
 
+    // Registry auth secret name (created before job)
+    if (regConfig.authSecret) {
+      // kanikoArgs.push(`--registry-credentials=${regConfig.host}=${regConfig.authSecret.username}:${regConfig.authSecret.password}`);
+      const dockerConfig = {
+        auths: {
+          [regConfig.authSecret.server]: {
+            auth: Buffer.from(
+              `${regConfig.authSecret.username}:${regConfig.authSecret.password}`
+            ).toString('base64'),
+          },
+        },
+      };
+
+      const secretName = `kaniko-creds-${jobName}`;
+
+      await clusterApi.coreApi.createNamespacedSecret({
+        namespace: BUILD_NAMESPACE,
+        body: {
+          apiVersion: 'v1',
+          kind: 'Secret',
+          metadata: { name: secretName, namespace: BUILD_NAMESPACE },
+          stringData: {
+            'config.json': JSON.stringify(dockerConfig),
+          },
+        }
+      });
+
+      // Add volume + mount to the job spec
+      kanikoJob.spec.template.spec.volumes.push({
+        name: 'docker-config',
+        secret: {
+          secretName,
+          items: [{ key: 'config.json', path: 'config.json' }],
+        },
+      });
+
+      kanikoJob.spec.template.spec.containers[0].volumeMounts.push({
+        name: 'docker-config',
+        mountPath: '/kaniko/.docker',
+      });
+
+    }
 
     // Ensure build namespace
     try {
       await clusterApi.coreApi.createNamespace({ body: { metadata: { name: BUILD_NAMESPACE } } });
-    } catch (e) { 
+    } catch (e) {
       // console.log(e);
-      if (e.code !== 409) throw e; }
+      if (e.code !== 409) throw e;
+    }
 
     try {
       await clusterApi.batchApi.createNamespacedJob({

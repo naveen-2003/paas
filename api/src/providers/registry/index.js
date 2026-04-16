@@ -4,8 +4,8 @@ async function getRegistryConfig(registry) {
   switch (registry.type) {
     case 'dockerhub':
       return {
-        host: 'registry.hub.docker.com',
-        destination: `registry.hub.docker.com/${registry.username}`,
+        host: 'index.docker.io',
+        destination: `docker.io/${registry.username}`,
         authSecret: {
           username: registry.username,
           password: registry.password_or_token,
